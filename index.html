@@ -1,0 +1,146 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+
+    <script src="./hand-controls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.148.0/three.min.js"></script>
+  </head>
+  <body style="overflow: hidden">
+    <script>
+      class THREE_SCAFFOLD {
+        constructor() {
+          let w = window.innerWidth,
+            h = window.innerHeight;
+          this.scene = new THREE.Scene();
+          this.camera = new THREE.PerspectiveCamera(75, w / h);
+          this.scene.background = new THREE.Color(0x232323);
+          this.scene.add(this.camera);
+
+          this.renderer = new THREE.WebGLRenderer();
+          this.renderer.setSize(w, h);
+          let d = this.renderer.domElement;
+          d.style.position = "absolute";
+          d.style.left = "0px";
+          d.style.top = "0px";
+          document.body.appendChild(d);
+
+          this.keys = {};
+          document.addEventListener("keydown", this.keyDown.bind(this));
+          document.addEventListener("keyup", this.keyUp.bind(this));
+          window.addEventListener("resize", this.windowResized.bind(this));
+
+          this.lights = {};
+          this.lights.ambi = new THREE.AmbientLight(0xffffff, 0.2);
+          this.scene.add(this.lights.ambi);
+          this.lights.dir = new THREE.DirectionalLight(0xffffff, 1.0);
+          this.lights.dir.position.set(-0.8, 0.5, 0.7);
+          this.scene.add(this.lights.dir);
+
+          this.clock = new THREE.Clock();
+
+          this.handControls = new HandControls({
+            onResults: this.showResults.bind(this),
+            showResults: true,
+          });
+
+          this.setupScene();
+          this.animate();
+        }
+
+        showResults(results) {
+          if (
+            results.normalizedLandmarks &&
+            results.normalizedLandmarks.length > 0
+          ) {
+            for (let i = 0; i < results.normalizedLandmarks.length; i++) {
+              let hand = results.normalizedLandmarks[i];
+              let handedness = results.multiHandedness[i];
+              let handObject =
+                handedness.label == "Right" ? this.hand : this.hand2;
+
+              for (let j = 0; j < hand.length; j++) {
+                let p = hand[j];
+                let x = -p.x;
+                let y = -p.y + 0.5;
+                let z = results.multiHandLandmarks[i][j].z;
+                handObject.children[j].position.set(x, y, z);
+              }
+              if (handedness.label == "Right") {
+                this.data = results.data[i];
+              }
+            }
+          }
+        }
+
+        setupScene() {
+          /* setup your scene here */
+          /* START */
+          this.handsParent = new THREE.Object3D();
+          this.scene.add(this.handsParent);
+          this.handsParent.position.z = -1;
+
+          this.hand = new THREE.Object3D();
+
+          for (let i = 0; i < 21; i++) {
+            let sphere = new THREE.Mesh(
+              new THREE.IcosahedronGeometry(0.01, 0),
+              new THREE.MeshStandardMaterial({ flatShading: true })
+            );
+            sphere.position.x = Math.random() - 0.5;
+            sphere.position.y = Math.random() - 0.5;
+            this.hand.add(sphere);
+          }
+          this.hand2 = this.hand.clone();
+          this.hand2.position.x = 0.5;
+          this.handsParent.add(this.hand);
+          this.handsParent.add(this.hand2);
+
+          let sphere = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.01, 0),
+            new THREE.MeshStandardMaterial({
+              flatShading: true,
+              color: 0xff0000,
+            })
+          );
+          this.handsParent.add(sphere);
+
+          /* END */
+        }
+
+        animate() {
+          requestAnimationFrame(this.animate.bind(this));
+          let delta = this.clock.getDelta();
+          let total = this.clock.getElapsedTime();
+
+          /* Update your scene here */
+          /* START */
+
+          if (this.data == undefined || this.data.indexAngle < 1)
+            this.hand.rotation.y += delta;
+          /* END */
+          //console.log(this.data);
+
+          this.renderer.render(this.scene, this.camera);
+        }
+
+        windowResized() {
+          this.camera.aspect = window.innerWidth / window.innerHeight;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        keyDown(event) {
+          this.keys[event.key] = true;
+        }
+        keyUp(event) {
+          this.keys[event.key] = false;
+        }
+      }
+
+      new THREE_SCAFFOLD();
+    </script>
+  </body>
+</html>
